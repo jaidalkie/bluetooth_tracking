@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ghost in the Pocket — Live Tracker Dashboard</title>
+<style>
+    body { font-family: monospace; background: #111; color: #eee; margin: 0; padding: 20px; }
+    h1 { font-size: 1.2em; }
+    #trackerCanvas { background: #1c1c1c; border: 1px solid #444; }
+    #legend { margin-top: 10px; font-size: 0.85em; color: #aaa; }
+    #deviceList { margin-top: 20px; font-size: 0.8em; }
+    #deviceList td, #deviceList th { padding: 4px 10px; text-align: left; border-bottom: 1px solid #333; }
+</style>
+</head>
+<body>
+
+<h1>Ghost in the Pocket — Live BLE Tracking Dashboard</h1>
+<canvas id="trackerCanvas" width="700" height="500"></canvas>
+<div id="legend">
+    <span style="color:#4da6ff;">■ Pi sensor</span> &nbsp;&nbsp;
+    <span style="color:#ff4d4d;">● tracked device</span>
+</div>
+
+<table id="deviceList">
+    <thead>
+        <tr><th>MAC</th><th>Est. Position (m)</th><th>Kalman RSSI</th><th>Addr Type</th><th>Anchors</th><th>Stale</th></tr>
+    </thead>
+    <tbody id="deviceListBody"></tbody>
+</table>
+
+<script>
+// --- Coordinate transform: meters (data) -> pixels (canvas) ---
+const METERS_TO_PX = 80;
+const ORIGIN_X = 40;
+const ORIGIN_Y = 40;
+
+function toCanvasCoords(x, y) {
+    return {
+        px: ORIGIN_X + x * METERS_TO_PX,
+        py: ORIGIN_Y + y * METERS_TO_PX,
+    };
+}
+
+const canvas = document.getElementById('trackerCanvas');
+const ctx = canvas.getContext('2d');
+
+async function fetchAndDraw() {
+    let data;
+    try {
+        const response = await fetch('/api/state');
+        data = await response.json();
+    } catch (err) {
+        console.error('Failed to fetch /api/state:', err);
+        return; // skip this frame rather than crash the loop
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // --- draw Pi sensor positions ---
+    ctx.fillStyle = '#4da6ff';
+    ctx.font = '12px monospace';
+    for (const [piId, pos] of Object.entries(data.pi_positions)) {
+        const { px, py } = toCanvasCoords(pos[0], pos[1]);
+        ctx.fillRect(px - 5, py - 5, 10, 10);
+        ctx.fillText(piId, px + 8, py + 4);
+    }
+
+    // --- draw tracked devices ---
+    ctx.fillStyle = '#ff4d4d';
+    for (const device of data.tracked_devices) {
+        const { px, py } = toCanvasCoords(device.x, device.y);
+        ctx.beginPath();
+        ctx.arc(px, py, 6, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillStyle = '#eee';
+        ctx.fillText(device.mac.slice(-8), px + 8, py + 4); // last 8 chars, keeps labels short
+        ctx.fillStyle = '#ff4d4d';
+    }
+
+    // --- update the table underneath the canvas ---
+    const tbody = document.getElementById('deviceListBody');
+    tbody.innerHTML = '';
+    for (const device of data.tracked_devices) {
+        const row = document.createElement('tr');
+        if (device.dead) row.style.opacity = '0.45';
+        row.innerHTML = `
+            <td>${device.mac}</td>
+            <td>(${device.x.toFixed(2)}, ${device.y.toFixed(2)})</td>
+            <td>${device.kalman_rssi?.toFixed(1) ?? '—'} dBm</td>
+            <td>${device.atype === 0 ? 'public (static)' : 'random'}</td>
+            <td>${device.anchors_used.join(', ')}</td>
+            <td>${device.beacon}</td>
+            <td>${device.dead ? 'stale' : 'live'}</td>
+        `;
+        tbody.appendChild(row);
+    }
+}
+
+setInterval(fetchAndDraw, 1000);
+fetchAndDraw();
+</script>
+
+</body>
+</html>

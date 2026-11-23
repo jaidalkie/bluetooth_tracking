@@ -1,0 +1,2 @@
+sudo python3 .
+while in the bt_full dir

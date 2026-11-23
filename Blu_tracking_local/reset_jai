@@ -1,0 +1,9 @@
+ssh-keygen -R 192.168.1.114
+
+rm -f ~/.ssh/authorized_keys
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+
+scp $env:USERPROFILE\.ssh\id_ed25519_new.pub jai@192.168.1.114:~/new.pub
+ssh jai@192.168.1.114 "cat ~/new.pub >> ~/.ssh/authorized_keys && rm ~/new.pub && chmod 600 ~/.ssh/authorized_keys"
+
+ssh -i $env:USERPROFILE\.ssh\id_ed25519_new jai@192.168.1.114

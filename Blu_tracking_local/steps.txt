@@ -1,0 +1,7 @@
+ssh orangepi@192.168.1.112
+ssh may@192.168.1.113
+ssh jai@192.168.1.114
+
+scp -r "C:\Users\jaija\1projects\1C_projects\Blu_tracking\*" orangepi@192.168.1.112:~/bt_full
+scp -r "C:\Users\jaija\1projects\1C_projects\Blu_tracking\*" may@192.168.1.113:~/bt_full
+scp -r "C:\Users\jaija\1projects\1C_projects\Blu_tracking\*" jai@192.168.1.114:~/bt_full
