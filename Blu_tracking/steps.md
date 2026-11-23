@@ -19,4 +19,4 @@ sudo hciconfig hci0 up
 hciconfig
 python3 /bt_full
 
-http://192.168.1.106:5000
+http://192.*********:5000
